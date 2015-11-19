@@ -25,7 +25,9 @@ def order_by_score(queryset, score_fields, date_field, reverse=True):
         "mysql": "UNIX_TIMESTAMP(%s)",
         "postgresql_psycopg2": "EXTRACT(EPOCH FROM %s)" ,
     }
-    db_engine = settings.DATABASES[queryset.db]["ENGINE"].rsplit(".", 1)[1]
+    db_engine = settings.DATABASES[queryset.db]["ENGINE"].rsplit(".", 1)[-1]
+    if db_engine not in timestamp_sqls:
+        db_engine = settings.DATABASE_COMPAT
     timestamp_sql = timestamp_sqls.get(db_engine)
 
     if timestamp_sql:
