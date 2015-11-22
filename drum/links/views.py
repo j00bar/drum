@@ -3,20 +3,26 @@ from future.builtins import super
 
 from datetime import timedelta
 
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.messages import info, error
 
+from django.http import HttpResponseRedirect
+from django.core.mail import mail_admins
+from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.timezone import now
 from django.views.generic import ListView, CreateView, DetailView, TemplateView
+from django.views.decorators.http import require_http_methods
 
 from mezzanine.accounts import get_profile_model
 from mezzanine.conf import settings
 from mezzanine.generic.models import ThreadedComment, Keyword
 from mezzanine.utils.views import paginate
+from ratelimit.decorators import ratelimit
 
 from drum.links.forms import LinkForm
-from drum.links.models import Link
+from drum.links.models import Link, ViolationReport
 from drum.links.utils import order_by_score
 
 
@@ -200,3 +206,24 @@ class CommentList(ScoreOrderingView):
 
 class TagList(TemplateView):
     template_name = "links/tag_list.html"
+
+
+@require_http_methods(['POST'])
+@login_required
+@ratelimit(key='post:user', rate='3/m')
+def report_link(request, slug):
+    link_obj = get_object_or_404(Link, slug=slug)
+    ViolationReport.objects.create(
+        link=link_obj, reported_by=request.user
+    )
+    mail_admins(
+        u'Violation Report',
+        u'User %s has reported link %s as violating the site policies. '
+        u'Find it here: %s' % (request.user.username,
+                               link_obj,
+                               request.build_absolute_uri(
+                                   reverse('admin:links_link_change', args=(link_obj.pk,))))
+    )
+    info(request, u'A violation report has been successfully sent to the admins. Thank you!')
+    return HttpResponseRedirect(reverse('link_detail', args=(slug,)))
+

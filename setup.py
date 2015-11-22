@@ -53,6 +53,7 @@ try:
         install_requires=[
             "mezzanine >= 4.0.1",
             "sphinx-me",
+            'django-ratelimit>=0.6.0'
         ],
 
         classifiers=[

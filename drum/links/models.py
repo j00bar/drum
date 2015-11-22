@@ -97,3 +97,12 @@ def karma(sender, **kwargs):
     if rating.user != content_object.user:
         queryset = get_profile_model().objects.filter(user=content_object.user)
         queryset.update(karma=models.F("karma") + value)
+
+class ViolationReport(models.Model):
+    link = models.ForeignKey(Link)
+    reported_by = models.ForeignKey('auth.User', null=True)
+    reported = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return u'%s reported by %s (%s)' % (self.link, self.reported_by,
+                                            self.reported)
